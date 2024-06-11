@@ -37,6 +37,11 @@ import (
 	"github.com/filecoin-project/lotus/metrics"
 )
 
+const (
+	initialReorgChBuf = 32
+	maxReorgChBuf     = 512
+)
+
 var log = logging.Logger("chainstore")
 
 var (
@@ -396,7 +401,7 @@ func (cs *ChainStore) SetGenesis(ctx context.Context, b *types.BlockHeader) erro
 func (cs *ChainStore) RefreshHeaviestTipSet(ctx context.Context, newTsHeight abi.ChainEpoch) error {
 	for {
 		cs.heaviestLk.Lock()
-		if len(cs.reorgCh) < reorgChBuf/2 {
+		if len(cs.reorgCh) < cap(cs.reorgCh)/2 {
 			break
 		}
 		cs.heaviestLk.Unlock()
@@ -407,7 +412,6 @@ func (cs *ChainStore) RefreshHeaviestTipSet(ctx context.Context, newTsHeight abi
 			return ctx.Err()
 		}
 	}
-
 	defer cs.heaviestLk.Unlock()
 
 	heaviestWeight, err := cs.weight(ctx, cs.StateBlockstore(), cs.heaviest)
@@ -594,10 +598,18 @@ type reorg struct {
 	new *types.TipSet
 }
 
-const reorgChBuf = 32
+func newReorgChan() chan reorg {
+	return make(chan reorg, initialReorgChBuf)
+}
+
+func resizeReorgChan(oldChan chan reorg, newSize int) chan reorg {
+	newChan := make(chan reorg, newSize)
+ 	close(oldChan)
+ 	return newChan
+}
 
 func (cs *ChainStore) reorgWorker(ctx context.Context, initialNotifees []ReorgNotifee) chan<- reorg {
-	out := make(chan reorg, reorgChBuf)
+	out := newReorgChan()
 	notifees := make([]ReorgNotifee, len(initialNotifees))
 	copy(notifees, initialNotifees)
 
@@ -612,6 +624,13 @@ func (cs *ChainStore) reorgWorker(ctx context.Context, initialNotifees []ReorgNo
 				notifees = append(notifees, n)
 
 			case r := <-out:
+ 				if len(out) >= cap(out)-1 && cap(out) < maxReorgChBuf {
+ 					out = resizeReorgChan(out, cap(out)*2)
+ 					log.Warnf("reorg channel buffer increased to %d", cap(out))
+ 				} else if len(out) < cap(out)/2 && cap(out) > initialReorgChBuf {
+ 					out = resizeReorgChan(out, cap(out)/2)
+ 					log.Warnf("reorg channel buffer decreased to %d", cap(out))
+ 				}
 				revert, apply, err := cs.ReorgOps(ctx, r.old, r.new)
 				if err != nil {
 					log.Error("computing reorg ops failed: ", err)
