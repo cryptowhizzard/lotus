@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/ipfs/go-cid"
 	cbg "github.com/whyrusleeping/cbor-gen"
@@ -53,6 +55,42 @@ type deadline13 struct {
 type partition13 struct {
 	miner13.Partition
 	store adt.Store
+}
+
+type cacheEntry struct {
+	timestamp time.Time
+}
+
+var (
+	cache         = make(map[uint64]cacheEntry)
+	cacheDuration = 5 * time.Minute
+	cacheMutex    sync.Mutex
+)
+
+func isSectorInCache(sectorID uint64) bool {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
+	entry, exists := cache[sectorID]
+	if !exists {
+		return false
+	}
+
+	if time.Since(entry.timestamp) > cacheDuration {
+		delete(cache, sectorID)
+		return false
+	}
+
+	return true
+}
+
+func addSectorToCache(sectorID uint64) {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
+	cache[sectorID] = cacheEntry{
+		timestamp: time.Now(),
+	}
 }
 
 func (s *state13) AvailableBalance(bal abi.TokenAmount) (available abi.TokenAmount, err error) {
@@ -132,6 +170,10 @@ func (s *state13) NumLiveSectors() (uint64, error) {
 //
 // If the sector does not expire early, the Early expiration field is 0.
 func (s *state13) GetSectorExpiration(num abi.SectorNumber) (*SectorExpiration, error) {
+	if isSectorInCache(uint64(num)) {
+		return nil, xerrors.Errorf("failed to find sector %d", num)
+	}
+
 	dls, err := s.State.LoadDeadlines(s.store)
 	if err != nil {
 		return nil, err
@@ -193,6 +235,7 @@ func (s *state13) GetSectorExpiration(num abi.SectorNumber) (*SectorExpiration, 
 		return nil, err
 	}
 	if out.Early == 0 && out.OnTime == 0 {
+		addSectorToCache(uint64(num))
 		return nil, xerrors.Errorf("failed to find sector %d", num)
 	}
 	return &out, nil
