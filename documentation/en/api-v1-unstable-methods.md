@@ -5423,7 +5423,7 @@ Response:
         },
         "Nonce": 42,
         "Balance": "0",
-        "Address": "f01234"
+        "DelegatedAddress": "f01234"
       }
     },
     "GasCharges": [
@@ -5463,7 +5463,7 @@ Response:
             },
             "Nonce": 42,
             "Balance": "0",
-            "Address": "f01234"
+            "DelegatedAddress": "f01234"
           }
         },
         "GasCharges": [
@@ -5515,7 +5515,7 @@ Response:
     },
     "Nonce": 42,
     "Balance": "0",
-    "Address": "f01234"
+    "DelegatedAddress": "f01234"
   }
 }
 ```
@@ -5685,7 +5685,7 @@ Response:
             },
             "Nonce": 42,
             "Balance": "0",
-            "Address": "f01234"
+            "DelegatedAddress": "f01234"
           }
         },
         "GasCharges": [
@@ -5725,7 +5725,7 @@ Response:
                 },
                 "Nonce": 42,
                 "Balance": "0",
-                "Address": "f01234"
+                "DelegatedAddress": "f01234"
               }
             },
             "GasCharges": [
@@ -5887,7 +5887,7 @@ Response:
   },
   "Nonce": 42,
   "Balance": "0",
-  "Address": "f01234"
+  "DelegatedAddress": "f01234"
 }
 ```
 
@@ -6185,7 +6185,7 @@ Response:
     "UpgradeWatermelonHeight": 10101,
     "UpgradeDragonHeight": 10101,
     "UpgradePhoenixHeight": 10101,
-    "UpgradeAussieHeight": 10101
+    "UpgradeWaffleHeight": 10101
   },
   "Eip155ChainID": 123
 }
@@ -7306,7 +7306,7 @@ Response:
         },
         "Nonce": 42,
         "Balance": "0",
-        "Address": "f01234"
+        "DelegatedAddress": "f01234"
       }
     },
     "GasCharges": [
@@ -7346,7 +7346,7 @@ Response:
             },
             "Nonce": 42,
             "Balance": "0",
-            "Address": "f01234"
+            "DelegatedAddress": "f01234"
           }
         },
         "GasCharges": [
